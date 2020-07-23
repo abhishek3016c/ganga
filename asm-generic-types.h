@@ -1,0 +1,8 @@
+//
+// Created by Abhishek Chaturvedi on 12/15/19.
+//
+
+#ifndef GGUSEREXITS_ASM_GENERIC_TYPES_H
+#define GGUSEREXITS_ASM_GENERIC_TYPES_H
+
+#endif //GGUSEREXITS_ASM_GENERIC_TYPES_H

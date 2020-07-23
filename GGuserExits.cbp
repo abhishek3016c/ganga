@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="GGuserExits" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/GGuserExits" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/GGuserExits" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/Makefile_exit_demo.AIX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/Makefile_exit_demo.HPUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/Makefile_exit_demo.HP_OSS" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/Makefile_exit_demo.LINUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/Makefile_exit_demo.SOLARIS" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/exitdemo.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/exitdemo.vcproj" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/exitdemo_utf16.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo/readme.txt" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_lobs/Makefile_lob.AIX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_lobs/Makefile_lob.HPUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_lobs/Makefile_lob.LINUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_lobs/Makefile_lob.SOLARIS" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_lobs/exitdemo_lob.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_lobs/exitdemo_lob.vcproj" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_lobs/readme.txt" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_more_recs/Makefile_more_recs.AIX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_more_recs/Makefile_more_recs.HPUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_more_recs/Makefile_more_recs.LINUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_more_recs/Makefile_more_recs.SOLARIS" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_more_recs/exitdemo_more_recs.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_more_recs/exitdemo_more_recs.vcproj" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_more_recs/readme.txt" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_passthru/Makefile_passthru.AIX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_passthru/Makefile_passthru.HPUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_passthru/Makefile_passthru.HP_OSS" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_passthru/Makefile_passthru.LINUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_passthru/Makefile_passthru.SOLARIS" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_passthru/exitdemo_passthru.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_passthru/exitdemopassthru.vcproj" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_passthru/readme.txt" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_pk_befores/Makefile_pk_befores.AIX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_pk_befores/Makefile_pk_befores.HPUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_pk_befores/Makefile_pk_befores.LINUX" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_pk_befores/Makefile_pk_befores.SOLARIS" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_pk_befores/exitdemo_pk_befores.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_pk_befores/exitdemo_pk_befores.vcproj" />
+		<Unit filename="../../../Downloads/rough/UserExitExamples/ExitDemo_pk_befores/readme.txt" />
+		<Unit filename="main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Extensions>
+			<envvars />
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

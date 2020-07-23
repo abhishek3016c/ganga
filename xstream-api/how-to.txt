@@ -1,0 +1,81 @@
+#Capture change for entire database
+connect stradm/stradm
+BEGIN
+    DBMS_XSTREAM_ADM.CREATE_OUTBOUND(
+        server_name => 'dbnexus_out',
+        queue_name => 'datavalidation_q');
+END
+/;
+
+#Useful links
+https://docs.oracle.com/cd/E11882_01/server.112/e16545/xstrm_oci.htm#XSTRM17728
+
+#How to compile
+gcc -c -I$ORACLE_HOME/rdbms/public/ /home/oracle/dbnexus/dbnexus.c -o /home/oracle/dbnexus/dbnexus
+
+Usage: xout -svr <svr_name> -db <db_name> -usr <conn_user> -pwd <password>
+
+svr  : outbound server name
+db   : database name of outbound server
+usr  : connect user to outbound server
+pwd  : password of outbound's connect user
+
+
+#Docker setup
+docker login container-registry.oracle.com
+docker pull container-registry.oracle.com/os/oraclelinux
+docker pull container-registry.oracle.com/os/java/serverjre
+docker container run -i -t -h oracletest container-registry.oracle.com/os/oraclelinux
+1. Pull Oracle Database image
+    #For enterprise edition
+    docker pull container-registry.oracle.com/database/enterprise:12.2.0.1
+    #for standard edition
+    docker pull container-registry.oracle.com/database/standard:12.1.0.2
+2. Run Oracle container
+docker container run -i -t -h oracletest container-registry.oracle.com/database/enterprise
+docker container run -i -t -h standard container-registry.oracle.com/database/standard
+
+3. Execute shell to container
+docker exec -it <docker ID> /bin/bash
+
+4.How to install Oracle demos
+Install XQuartz from https://www.xquartz.org/
+# allow access from localhost
+xhost + 127.0.0.1
+# run firefox with X11 forwarding and keep running until it quits
+docker run -e DISPLAY=host.docker.internal:0 jess/firefox
+https://docs.oracle.com/en/database/oracle/oracle-database/19/exmpl/index.html#EXMPL-GUID-83DD7763-FCC3-4F15-978F-21055F600EF4
+./runInstaller -silent -responseFile ./response/demos_install.rsp -ignorePrereqFailure -showProgress -ignoreSysPrereqs
+
+#Compile and run
+make -f $ORACLE_HOME/rdbms/demo/demo_rdbms.mk build EXE=dbnexus OBJS=dbnexus.o
+/home/oracle/dbnexus/dbnexus -svr DBNEXUS_OUT -db database -usr stradm -pwd stradm
+
+#Change the start SCN / start time for capture process
+BEGIN
+  DBMS_XSTREAM_ADM.ALTER_OUTBOUND(
+    server_name => 'DBNEXUS_OUT',
+    start_scn    => <NEW SCN>);
+END;
+/
+
+url
+http://corsa04-provisionediops-2015363004.vpod.t.force.com
+app
+app
+db
+qpid
+qpid
+mnds1
+lb
+controller1
+load1
+10.225.246.172
+10.225.246.226
+10.225.246.240
+10.225.246.36
+10.225.246.61
+10.225.246.219
+10.225.243.249
+10.225.246.34
+10.225.246.28

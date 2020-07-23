@@ -1,0 +1,2 @@
+ADD EXTRACT testpmp, EXTTRAILSOURCE ./dirdat/lt
+ADD RMTTRAIL ./dirdat/rt, EXTRACT testpmp

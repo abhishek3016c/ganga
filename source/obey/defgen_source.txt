@@ -1,0 +1,1 @@
+defgen paramfile ./dirprm/make_testsrc.prm

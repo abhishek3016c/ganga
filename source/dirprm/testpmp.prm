@@ -1,0 +1,18 @@
+extract testpmp
+
+passthru
+rmthost celcsol1.us.oracle.com, mgrport 8009
+rmttrail ./dirdat/rt
+statoptions reportfetch 
+reportcount every 10 minutes, rate
+discardfile ./dirrpt/testpmp.dsc, append
+gettruncates
+
+table testsrc.test1;
+sequence testsrc.test1_seq;
+table testsrc.test2;
+table testsrc.testdef;
+
+
+
+

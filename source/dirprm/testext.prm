@@ -1,0 +1,53 @@
+extract testext
+
+userid ggsuser, password ggsuser
+exttrail ./dirdat/lt
+
+discardfile ./dirrpt/testext.dsc, append
+
+--  This exludes this user from replication.
+--
+-- TRANLOGOPTIONS EXCLUDEUSER TESTTRG
+--
+-- targetdefs./dirdef/testtrg.def
+--
+--  Demo 1
+--
+table testsrc.test1;
+sequence testsrc.test1_seq;
+table testsrc.test2;
+--
+-- Demo 1a
+table testsrc.testdef;
+--
+
+--  Demo 2
+--
+--table testsrc.test1, TOKENS ( 
+--TKN-ACT_TIME = @GETENV("DBRECORD","TIMESTAMP"),
+--TKN-COMMIT-TS = @GETENV ("GGHEADER", "COMMITTIMESTAMP"),
+--TKN-OP-TYPE = @GETENV ("GGHEADER", "OPTYPE"),
+--TKN-LAG-SEC = @GETENV ("LAG", "SECONDS"),
+--TKN-DB-USER = @GETENV ("TRANSACTION", "USERNAME"));
+--sequence testsrc.test1_seq;
+--table testsrc.test2;
+--
+-- Demo 3 using sqlexec with filtering
+--
+--table testsrc.test1 
+--SQLEXEC (ID test_date, QUERY
+--"select sysdate from dual",
+--NOPARAMS),
+--TOKENS ( token_date = @GETVAL(test_date.sysdate));
+--sequence testsrc.test1_seq;
+--table testsrc.test2, TOKENS (
+--tkn_username = @GETENV("TRANSACTION","USERNAME"));
+
+-- Demo 4  Warehousing and auditing examples
+--table scott.emp, target testtrg.scott;
+--table scott.bonus,
+--SQLEXEC (ID lookup1, 
+--QUERY " select empno empnum from scott.emp where ename = :ename1 and job = :job1 ",
+--PARAMS (ename1=ename, job1 = job)), 
+--TOKENS (
+--tkn_empno = lookup1.empnum);

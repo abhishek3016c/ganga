@@ -1,0 +1,3 @@
+DEFSFILE ./dirdef/testsrc.def PURGE
+userid ggsuser password ggsuser
+table testsrc.*;

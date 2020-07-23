@@ -1,0 +1,27 @@
+/* USEREXIT extract parameters */
+
+Parameter file contents:
+  EXTRACT USEREXIT
+  SETENV (ORACLE_HOME = "/oracle/rdbms/11.2.0.4")
+  SETENV (ORACLE_SID = "GSDB0-1")
+  USERIDALIAS ggss
+  TRANLOGOPTIONS DBLOGREADER
+  TRANLOGOPTIONS DBLOGREADERBUFSIZE 4096000
+  TRANLOGOPTIONS _READAHEADCOUNT 64
+  TRANLOGOPTIONS BUFSIZE 5000000
+  THREADOPTIONS PROCESSTHREADS SELECT 1
+  GETTRUNCATES
+  REPORTCOUNT EVERY 5 MINUTES RATE
+  DDL INCLUDE MAPPED
+  CUSEREXIT ./dirue/ddlextract.so DDLEXTRACT
+  EXTTRAIL ./dirdat/ec
+  TABLE testsrc.TMP_CUSTOM_INDEX_, EXITPARAM '/oracle/goldengate/12.3.0.4/dirue/orgids.init';
+
+
+dblogin useridalias ggss
+add extract userexit, tranlog threads 4 begin now
+add exttrail ./dirdat/ec, extract userexit
+
+
+ALTER TABLE testsrc.TMP_CUSTOM_INDEX_ ADD c2 VARCHAR2(30);
+ALTER TABLE testsrc.TMP_CUSTOM_INDEX_ SET UNUSED (C2);

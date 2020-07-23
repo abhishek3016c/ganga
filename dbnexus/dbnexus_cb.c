@@ -3,7 +3,7 @@ All rights reserved. */
 
 /*
 
-   NAME         xout - XStream Out Client Using Non-Callback Method.
+   NAME         xout_cb - XStream Out Client Program Using Callback Method.
 
    DESCRIPTION  
    This program attaches to XStream outbound server and waits for 
@@ -12,11 +12,11 @@ All rights reserved. */
    prints the first 50 bytes of each chunk. 
 
    This program waits indefinitely for transactions from the outbound server.
-   Hit control-C to interrupt the program. 
+   Hit control-C to interrupt the program.
 
    This program does not set the processed low position for the outbound
    server. This was not done to demonstrate that if the processed low position
-   is not set then each time the program re-attaches to the outbound server, 
+   is not set then each time the program re-attaches to the outbound server,
    the same set of LCRs are resent from the server.
 
    Usage: xout -svr <svr_name> -db <db_name> -usr <conn_user> -pwd <password>
@@ -25,12 +25,13 @@ All rights reserved. */
      db   : database name of outbound server
      usr  : connect user to outbound server
      pwd  : password of outbound's connect user
+
 */
 
 #ifndef OCI_ORACLE
 #include <oci.h>
 #endif
-
+ 
 #ifndef _STDIO_H
 #include <stdio.h>
 #endif
@@ -50,7 +51,6 @@ All rights reserved. */
 /*---------------------------------------------------------------------- 
  *           Internal structures
  *----------------------------------------------------------------------*/ 
-
 #define MAX_COLUMNS        1000                       /* max cols in a table */
 #define MAX_PRINT_BYTES    (50) /* print max of 50 bytes per col/chunk value */
 #define BUF_SIZE           80
@@ -114,7 +114,6 @@ static void attach(oci_t *ocip, params_t *paramsp);
 static void detach(oci_t *ocip);
 static void get_lcrs(oci_t *ocip);
 static void print_lcr(oci_t *ocip, void *lcrp, ub1 lcrtype);
-static void princt_lcr_cb(void *ocip, void *lcrp, ub1 lcrtype, oraub8 flags);
 static void get_chunks(oci_t * ocip);
 static void print_chunk (ub1 *chunk_ptr, ub4 chunk_len, ub2 dty);
 static void print_col_data(oci_t *ocip, void *lcrp, ub2 col_value_type);
@@ -259,80 +258,53 @@ static void attach(oci_t * ocip, params_t *paramsp)
 }
 
 /*---------------------------------------------------------------------
+ * process_lcr_cb - Callback function to process each LCR received.
+ *---------------------------------------------------------------------*/
+static sb4 process_lcr_cb(void *ctxp, void *lcrp, ub1 lcrtype, oraub8 flag)
+{
+  print_lcr((oci_t *)ctxp, lcrp, lcrtype); 
+  return OCI_CONTINUE;
+}
+
+/*---------------------------------------------------------------------
+ * process_chunk_cb - Callback function to process each chunk received.
+ *---------------------------------------------------------------------*/
+static sb4 process_chunk_cb(void *ctxp, oratext *colname, ub2 colname_len,
+                            ub2 coldty, oraub8 col_flags, ub2 col_csid,
+                            ub4 chunk_len, ub1 *chunk_data, oraub8 row_flag)
+{
+  /* print chunked column info */
+  printf(
+     "Chunked column name=%.*s DTY=%d  chunk len=%d csid=%d col_flag=0x%lx\n",
+     colname_len, colname, coldty, chunk_len, col_csid, 
+     (unsigned long)col_flags);
+
+  /* print each chunk received */
+  print_chunk(chunk_data, chunk_len, coldty);
+  return OCI_CONTINUE;
+}
+
+/*---------------------------------------------------------------------
  * get_lcrs - Execute loop to get lcrs from outbound server.
  *---------------------------------------------------------------------*/
 static void get_lcrs(oci_t * ocip)
 {
   sword       status = OCI_SUCCESS;
-  void       *lcr;
-  ub1         lcrtype;
-  oraub8      flag;
 
   while (status == OCI_SUCCESS)
   {
-    /* Execute non-callback call to receive LCRs */
-    while ((status = OCIXStreamOutLCRReceive(ocip->svcp, ocip->errp,
-                                             &lcr, &lcrtype, &flag, 
-                                             (ub1 *)0, (ub2 *)0, OCI_DEFAULT))
-                          == OCI_STILL_EXECUTING)
-    {
-      /*print_lcr(ocip, lcr, lcrtype); */
-      print_lcr_cb(ocip, lcr, lcrtype, flag);
-
-      /* If LCR has chunked columns (i.e, has LOB/Long/XMLType columns) */
-      if (flag & OCI_XSTREAM_MORE_ROW_DATA)
-      {
-        /* Get all the chunks belonging to the current LCR. */
-        get_chunks(ocip);  
-      }
-    }
-
-    if (status == OCI_ERROR)
-      ocierror(ocip, (char *)"get_lcrs() failed");
+    /* Execute the callback version of receive LCR call.
+     * Pass process_lcr_cb as the callback function to process each LCR.
+     * Pass process_chunk_cb as the callback function to process each chunk.
+     * Pass ocip as the user context that is passed to each of the callback
+     * function.
+     */
+    status = OCIXStreamOutLCRCallbackReceive(ocip->svcp, ocip->errp,
+                                 process_lcr_cb, process_chunk_cb, ocip, 
+                                 (ub1 *)0, (ub2 *)0, OCI_DEFAULT);
   }
-}
-
-/*---------------------------------------------------------------------
- * get_chunks - Get all the chunks belonging to the current LCR.
- *---------------------------------------------------------------------*/
-static void get_chunks(oci_t * ocip)
-{
-  sword       status = OCI_SUCCESS;
-  oratext    *colname;
-  ub2         colname_len;
-  ub2         coldty;
-  oraub8      col_flags;
-  ub2         col_csid;
-  ub4         chunk_len;                            /* chunk length in bytes */
-  ub1        *chunk_data;                           /* Ptr to the chunk data */
-  oraub8      row_flag;
-
-  /* Loop to receive each chunk until there is no more data for the current
-   * row change.
-   */
-  do 
-  {
-    /* Execute non-callback call to receive each chunk */
-    status = OCIXStreamOutChunkReceive(ocip->svcp, ocip->errp, &colname,
-                                       &colname_len, &coldty, &col_flags, 
-                                       &col_csid, &chunk_len, &chunk_data, 
-                                       &row_flag, OCI_DEFAULT);
-    if (status != OCI_SUCCESS)
-      ocierror(ocip, (char *)"ReceiveChunk() failed");
-
-    /* print chunked column info */
-    printf(
-      "Chunked column name=%.*s DTY=%d  chunk len=%d csid=%d col_flag=0x%lx\n",
-      colname_len, colname, coldty, chunk_len, col_csid, 
-      (unsigned long)col_flags);
-
-    /* print each chunk received */
-    print_chunk(chunk_data, chunk_len, coldty);
-
-    if (status == OCI_ERROR)
-      ocierror(ocip, (char *)"get_lcrs() failed");
-
-  } while (row_flag & OCI_XSTREAM_MORE_ROW_DATA);
+  if (status == OCI_ERROR)
+   ocierror(ocip, (char *)"get_lcrs() failed");
 }
 
 /*---------------------------------------------------------------------
@@ -431,7 +403,7 @@ static void print_col_data(oci_t *ocip, void *lcrp, ub2 col_value_type)
           OCINumber  *rawnum = colval[idx];
           float       float_val;
 
-          OCICALL(ocip, 
+          OCICALL(ocip,
                   OCINumberToReal(ocip->errp, (const OCINumber *)rawnum,
                                  sizeof(float_val), &float_val));
 
@@ -497,7 +469,7 @@ static void print_col_data(oci_t *ocip, void *lcrp, ub2 col_value_type)
         {
           OCIInterval  *intv = colval[idx];
           size_t        reslen;                    /* result interval length */
-          ub2           intv_len;                  /* result interval length */
+          ub2           intv_len;
 
           OCICALL(ocip,
                   OCIIntervalToText(ocip->envp, ocip->errp, intv, 
@@ -547,6 +519,7 @@ static void print_col_data(oci_t *ocip, void *lcrp, ub2 col_value_type)
  *---------------------------------------------------------------------*/
 static void print_chunk (ub1 *chunk_ptr, ub4 chunk_len, ub2 dty)
 {
+#define MAX_PRINT_BYTES     (50)          /* print max of 50 bytes per chunk */
 
   ub4  print_bytes;
 
@@ -632,198 +605,6 @@ static void print_lcr(oci_t *ocip, void *lcrp, ub1 lcrtype)
   } 
 }
 
-
-static void print_lcr_cb(void *vctxp, void *lcrp, ub1 lcrtype, oraub8 flags)
-{
-   myctx_t *ctxp = (myctx_t*)vctxp;
-   sword      ret;
-   oci_t   *ociout = ctxp->outbound_ocip;
-   ub2      num_bind = 0;
-   ub2      bind_var_dtyp[ARR_SIZE];
-   void    *bind_var_valuesp[ARR_SIZE];
-   OCIInd   bind_var_indp[ARR_SIZE];
-   ub2      bind_var_alensp[ARR_SIZE];
-   ub2      bind_var_csetidp[ARR_SIZE];
-   ub1      bind_var_csetfp[ARR_SIZE];
-   oratext *lob_column_names[ARR_SIZE];
-   ub2      lob_column_namesl[ARR_SIZE];
-   oraub8   lob_column_flags[ARR_SIZE];
-   ub2      array_size = ARR_SIZE;
-   oratext  bind_var_syntax[] = ":";
-
-   prepare_env(ctxp);
-
-
-   ctxp->lcrcnt++;
-   ret = OCILCRRowStmtGet(ociout->svcp, ociout->errp, ctxp->dml,
-                          &ctxp->dml_len , lcrp, OCI_DEFAULT);
-
-   /* Dont print COMMIT lcr */
-   if (!memcmp(ctxp->dml, " COMMIT ", 8))
-     return;
-
-   printf("------------------ LCR %d --------------------\n", ctxp->lcrcnt);
-   if (!ret)
-     printf("\nINLINE SQL\n------\nDML: [LEN=%d]\n %.*s\n\n",ctxp->dml_len,
-                                          ctxp->dml_len, ctxp->dml);
-   else
-     printf("INLINE DML FAILED (%d)\n", ret);
-
-
-   ctxp->dml_len = ctxp->max_len;
-   ret = OCILCRWhereClauseGet(ociout->svcp, ociout->errp, ctxp->dml,
-                             &ctxp->dml_len , lcrp, OCI_DEFAULT);
-   if (!ret)
-   {
-     printf ("WHERE CLAUSE:[LEN=%d]\n%.*s\n\n",ctxp->dml_len,
-                                             ctxp->dml_len, ctxp->dml);
-   }
-   else
-   {
-     printf("WHERE CLAUSE FAILED (%d)", ret);
-   }
-
-  ctxp->dml_len = ctxp->max_len;
-  num_bind = 0;
-  ret = OCILCRRowStmtWithBindVarGet(
-                        ociout->svcp, ociout->errp, ctxp->dml, &ctxp->dml_len,
-                        &num_bind,
-                        bind_var_dtyp, bind_var_valuesp, bind_var_indp,
-                        bind_var_alensp, bind_var_csetidp,
-                        bind_var_csetfp, lcrp,
-                        lob_column_names, lob_column_namesl, lob_column_flags,
-                        array_size, bind_var_syntax,
-                        OCI_DEFAULT);
-
-   if (!ret)
-     printf("\nBINDS SQL\n-----\nDML [LEN=%d] [BINDS=%d]\n %.*s\n\n",
-                                     ctxp->dml_len, num_bind,
-                                     ctxp->dml_len, ctxp->dml);
-   else
-     printf("BINDS DML FAILED (%d)\n", ret);
-
-   ctxp->dml_len = ctxp->max_len;
-
-   num_bind = 0;
-   ret = OCILCRWhereClauseWithBindVarGet(
-                        ociout->svcp, ociout->errp, ctxp->dml, &ctxp->dml_len,
-                        &num_bind,
-                        bind_var_dtyp, bind_var_valuesp, bind_var_indp,
-                        bind_var_alensp, bind_var_csetidp,
-                        bind_var_csetfp, lcrp,
-                        array_size, bind_var_syntax,
-                        OCI_DEFAULT);
-
-   if (!ret)
-     printf("WHERE CLAUSE [LEN=%d] [BINDS=%d]\n%.*s\n\n",
-                                     ctxp->dml_len, num_bind,
-                                     ctxp->dml_len, ctxp->dml);
-   else
-     printf("WHERE CLAUSE FAILED (%d)\n", ret);
-
-
-   if (flags & OCI_XSTREAM_MORE_ROW_DATA)
-   {
-     drain_chunks((myctx_t*)vctxp);
-   }
-}
-
-static void print_lcr_cb(void *vctxp, void *lcrp, ub1 lcrtype, oraub8 flags)
-{
-   myctx_t *ctxp = (myctx_t*)vctxp;
-   sword      ret;
-   oci_t   *ociout = ctxp->outbound_ocip;
-   ub2      num_bind = 0;
-   ub2      bind_var_dtyp[ARR_SIZE];
-   void    *bind_var_valuesp[ARR_SIZE];
-   OCIInd   bind_var_indp[ARR_SIZE];
-   ub2      bind_var_alensp[ARR_SIZE];
-   ub2      bind_var_csetidp[ARR_SIZE];
-   ub1      bind_var_csetfp[ARR_SIZE];
-   oratext *lob_column_names[ARR_SIZE];
-   ub2      lob_column_namesl[ARR_SIZE];
-   oraub8   lob_column_flags[ARR_SIZE];
-   ub2      array_size = ARR_SIZE;
-   oratext  bind_var_syntax[] = ":";
-
-   prepare_env(ctxp);
-
-
-   ctxp->lcrcnt++;
-   ret = OCILCRRowStmtGet(ociout->svcp, ociout->errp, ctxp->dml,
-                          &ctxp->dml_len , lcrp, OCI_DEFAULT);
-
-   /* Dont print COMMIT lcr */
-   if (!memcmp(ctxp->dml, " COMMIT ", 8))
-     return;
-
-   printf("------------------ LCR %d --------------------\n", ctxp->lcrcnt);
-   if (!ret)
-     printf("\nINLINE SQL\n------\nDML: [LEN=%d]\n %.*s\n\n",ctxp->dml_len,
-                                          ctxp->dml_len, ctxp->dml);
-   else
-     printf("INLINE DML FAILED (%d)\n", ret);
-
-
-   ctxp->dml_len = ctxp->max_len;
-   ret = OCILCRWhereClauseGet(ociout->svcp, ociout->errp, ctxp->dml,
-                             &ctxp->dml_len , lcrp, OCI_DEFAULT);
-   if (!ret)
-   {
-     printf ("WHERE CLAUSE:[LEN=%d]\n%.*s\n\n",ctxp->dml_len,
-                                             ctxp->dml_len, ctxp->dml);
-   }
-   else
-   {
-     printf("WHERE CLAUSE FAILED (%d)", ret);
-   }
-
-  ctxp->dml_len = ctxp->max_len;
-  num_bind = 0;
-  ret = OCILCRRowStmtWithBindVarGet(
-                        ociout->svcp, ociout->errp, ctxp->dml, &ctxp->dml_len,
-                        &num_bind,
-                        bind_var_dtyp, bind_var_valuesp, bind_var_indp,
-                        bind_var_alensp, bind_var_csetidp,
-                        bind_var_csetfp, lcrp,
-                        lob_column_names, lob_column_namesl, lob_column_flags,
-                        array_size, bind_var_syntax,
-                        OCI_DEFAULT);
-
-   if (!ret)
-     printf("\nBINDS SQL\n-----\nDML [LEN=%d] [BINDS=%d]\n %.*s\n\n",
-                                     ctxp->dml_len, num_bind,
-                                     ctxp->dml_len, ctxp->dml);
-   else
-     printf("BINDS DML FAILED (%d)\n", ret);
-
-   ctxp->dml_len = ctxp->max_len;
-
-   num_bind = 0;
-   ret = OCILCRWhereClauseWithBindVarGet(
-                        ociout->svcp, ociout->errp, ctxp->dml, &ctxp->dml_len,
-                        &num_bind,
-                        bind_var_dtyp, bind_var_valuesp, bind_var_indp,
-                        bind_var_alensp, bind_var_csetidp,
-                        bind_var_csetfp, lcrp,
-                        array_size, bind_var_syntax,
-                        OCI_DEFAULT);
-
-   if (!ret)
-     printf("WHERE CLAUSE [LEN=%d] [BINDS=%d]\n%.*s\n\n",
-                                     ctxp->dml_len, num_bind,
-                                     ctxp->dml_len, ctxp->dml);
-   else
-     printf("WHERE CLAUSE FAILED (%d)\n", ret);
-
-
-   if (flags & OCI_XSTREAM_MORE_ROW_DATA)
-   {
-     drain_chunks((myctx_t*)vctxp);
-   }
-}
-
-
 /*---------------------------------------------------------------------
  * detach - Detach from outbound server
  *---------------------------------------------------------------------*/
@@ -882,7 +663,7 @@ static void ocierror(oci_t * ocip, char * msg)
  *---------------------------------------------------------------------*/
 static void print_usage(int exitcode)
 {
-  puts((char *)"\nUsage: xout -svr <svr_name> -db <db_name> "
+  puts((char *)"\nUsage: xout_cb -svr <svr_name> -db <db_name> "
                "-usr <conn_user> -pwd <password>\n");
 
   puts("  svr  : outbound server name\n"
@@ -892,7 +673,6 @@ static void print_usage(int exitcode)
 
   exit(exitcode);
 }
-
 
 /*--------------------------------------------------------------------
  * get_inputs - Get user inputs from command line
@@ -961,4 +741,6 @@ static void get_inputs(params_t *params, int argc, char ** argv)
     print_usage(1);
   }
 }
+
+/* end of file xout_cb.c */
 

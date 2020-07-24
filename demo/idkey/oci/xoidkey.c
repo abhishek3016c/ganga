@@ -100,6 +100,8 @@ static const oratext DATE_FMT[] = "YYYY-MON-DD HH24:MI:SS";
 #define DATE_FMT_LEN            sizeof(DATE_FMT)-1
 #define DATE_BUF_LEN            80
 #define MAX_COLUMNS             1000
+#define OCI_LCR_MAX_ATTRIBUTES  9
+#define OCI_LCR_MAX_POSITION_LEN 64
 
 #define lbit(x,y)  ((x) & (y))
 

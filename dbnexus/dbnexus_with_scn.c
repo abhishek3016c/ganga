@@ -105,7 +105,29 @@ typedef struct oci                                            /* OCI handles */
   OCIServer   *srvp;                                        /* Server handle */
   OCISvcCtx   *svcp;                                       /* Service handle */
   OCISession  *authp;
+  OCIStmt   * stmtp;
+  OCIStmt   * stmt2p;
+  boolean     attached;
+  boolean     outbound;
 } oci_t;
+
+typedef struct myctx_t
+{
+  ub4       lcrcnt;
+  oci_t    *outbound_ocip;
+  oci_t    *sql_sel_ocip;    /* connection to the source db */
+  oratext  *owner;           /* owner of current LCR */
+  ub4       ownerlen;        /* length of owner of current LCR */
+  oratext  *oname;           /* object name */
+  ub4       onamelen;        /* length of object name */
+  oratext  *txid;            /* transaction id */
+  ub4       txidlen;         /* length of transaction id */
+  void     *lcrp;
+  boolean   is_commit;
+  ub1       last_lcrpos[OCI_LCR_MAX_POSITION_LEN];
+  ub2       last_lcrpos_len;
+  boolean   longform;
+} myctx_t;
 
 static void connect_db(params_t *opt_params_p, oci_t ** ocip);
 static void disconnect_db(oci_t * ocip);
@@ -261,23 +283,37 @@ static void attach(oci_t * ocip, params_t *paramsp)
 /*---------------------------------------------------------------------
  * get_lcrs - Execute loop to get lcrs from outbound server.
  *---------------------------------------------------------------------*/
-static void get_lcrs(oci_t * ocip)
+static void get_lcrs(myctx_t *ctx)
 {
   sword       status = OCI_SUCCESS;
   void       *lcr;
   ub1         lcrtype;
   oraub8      flag;
+  oraub8      flag;
+  ub1         flwm[OCI_LCR_MAX_POSITION_LEN];
+  ub2         flwm_len = 0;
+  ub1         proclwm[OCI_LCR_MAX_POSITION_LEN];
+  ub2         proclwm_len = 0;
+  sb4         rtncode = 0;
+  oci_t      *ocip = ctx->outbound_ocip;
+
+  printf ("\n>>> get_lcrs -- Start\n");
+
+  ctx->lcrcnt = 0;
 
   while (status == OCI_SUCCESS)
   {
+    startcnt = ctx->lcrcnt;
+    /* ignore unsupported LCRs and continue */
     /* Execute non-callback call to receive LCRs */
     while ((status = OCIXStreamOutLCRReceive(ocip->svcp, ocip->errp,
                                              &lcr, &lcrtype, &flag, 
-                                             (ub1 *)0, (ub2 *)0, OCI_DEFAULT))
+                                             flwm, &flwm_len, OCI_DEFAULT))
                           == OCI_STILL_EXECUTING)
     {
       /*print_lcr(ocip, lcr, lcrtype); */
-      print_lcr_cb(ocip, lcr, lcrtype, flag);
+      //print_lcr_cb(ocip, lcr, lcrtype, flag);
+      process_IDKeyLCR(ctx, lcr, lcrtype, flag);
 
       /* If LCR has chunked columns (i.e, has LOB/Long/XMLType columns) */
       if (flag & OCI_XSTREAM_MORE_ROW_DATA)
@@ -289,6 +325,59 @@ static void get_lcrs(oci_t * ocip)
 
     if (status == OCI_ERROR)
       ocierror(ocip, (char *)"get_lcrs() failed");
+  }
+}
+
+/*---------------------------------------------------------------------
+ * handleIDKeyLCR - Get RowID of this ID Key LCR, then query source
+ *                  database with the RowID.
+ *---------------------------------------------------------------------*/
+static void handleIDKeyLCR (myctx_t *myctx, void *lcrp)
+{
+  oratext rowid[80];
+  ub2 len = (ub2)sizeof(rowid);
+
+  /* get rowid from LCR */
+  getRowID(myctx, lcrp, rowid, &len);
+
+  printf("ID Key LCR: RowID = %.*s\n", len, rowid);
+  printf("myctx->owner=%.*s, len=%u\n", myctx->ownerlen, myctx->owner, myctx->ownerlen);
+  printf("myctx->oname=%.*s, len=%u\n", myctx->onamelen, myctx->oname, myctx->onamelen);
+  printf("myctx->txid =%.*s, len=%u\n", myctx->txidlen,  myctx->txid,  myctx->txidlen);
+
+  /* query source DB with this row id and then print the result */
+  query_withROWID(myctx->sql_sel_ocip, myctx, (char *)rowid, len, TRUE);
+}
+
+/*---------------------------------------------------------------------
+ * process_IDKeyLCR - process lcrs, and if it is IDkey then print it,
+ *               and query source DB with it's row id.
+ *---------------------------------------------------------------------*/
+static void process_IDKeyLCR(myctx_t *myctx, void *lcrp, ub1 lcrtyp, oraub8 flag)
+{
+  sword     ret;
+  boolean   id_key_lcr = FALSE;
+  boolean   stmt_lcr = FALSE;
+
+  myctx->lcrcnt++;
+  printf("\n ----------- Contents of LCR %d -----------------\n",
+         myctx->lcrcnt);
+
+  /* save lcr in the context for later use */
+  myctx->lcrp = lcrp;
+
+  /* Process this LCR. We print the contents and also gather necessary
+   * data for RowID process
+   */
+  ret = process_lcr(myctx, lcrp, lcrtyp, &id_key_lcr, &stmt_lcr);
+  fflush (stdout);
+
+  if (id_key_lcr)
+  {
+    /* print row id of this IDKey LCR and query source DB with the
+     * row id.
+     */
+    handleIDKeyLCR(myctx, lcrp);
   }
 }
 
@@ -599,10 +688,13 @@ static void print_pos(oci_t *ocip, ub1 *pos, ub2 poslen, char *comm)
 }
 
 
+
+
 /*---------------------------------------------------------------------
- * print_lcr - Print header information of given lcr.
+ * process_lcr - Print this LCR and process the data in it
  *---------------------------------------------------------------------*/
-static void print_lcr(oci_t *ocip, void *lcrp, ub1 lcrtype)
+static sb4 process_lcr(myctx_t *ctxp, void *lcrp, ub1 lcrtype,
+                       boolean *idkey_lcr, boolean *stmt_lcr)
 {
   oratext     *src_db_name;
   ub2          src_db_namel;
@@ -612,55 +704,118 @@ static void print_lcr(oci_t *ocip, void *lcrp, ub1 lcrtype)
   ub2          ownerl;
   oratext     *oname;
   ub2          onamel;
+  ub1         *tag;
+  ub2          tagl;
   oratext     *txid;
   ub2          txidl;
+  OCIDate      src_time;
+  oci_t       *ocip = ctxp->outbound_ocip;
   sword        ret;
+  oratext      datebuf[DATE_BUF_LEN+1];
+  ub4          datelen = DATE_BUF_LEN;
+  ub1         *pos;
+  ub2          pos_len;
+  oraub8       flag = 0;
+  boolean      seqlcr = FALSE;
 
-  printf("\n----------- %s LCR Header  -----------------\n",
-         lcrtype == OCI_LCR_XDDL ? "DDL" : "ROW");
+  *idkey_lcr = FALSE;
+  *stmt_lcr = FALSE;
 
   /* Get LCR Header information */
-  ret = OCILCRHeaderGet(ocip->svcp, ocip->errp, 
-                        &src_db_name, &src_db_namel,            /* source db */
-                        &cmd_type, &cmd_type_len,            /* command type */
-                        &owner, &ownerl,                       /* owner name */
-                        &oname, &onamel,                      /* object name */
-                        (ub1 **)0, (ub2 *)0,                      /* lcr tag */
-                        &txid, &txidl, (OCIDate *)0,   /* txn id  & src time */
-                        (ub2 *)0, (ub2 *)0,              /* OLD/NEW col cnts */
-                        (ub1 **)0, (ub2 *)0,                 /* LCR position */
-                        (oraub8*)0, lcrp, OCI_DEFAULT);
+  ret = OCILCRHeaderGet(ocip->svcp, ocip->errp,
+                        &src_db_name, &src_db_namel,       /* source db */
+                        &cmd_type, &cmd_type_len,       /* command type */
+                        &owner, &ownerl,                  /* owner name */
+                        &oname, &onamel,                 /* object name */
+                        &tag, &tagl,                         /* lcr tag */
+                        &txid, &txidl, &src_time, /* txn id  & src time */
+                        (ub2 *)0, (ub2 *)0,         /* OLD/NEW col cnts */
+                        &pos, &pos_len,                 /* LCR position */
+                        &flag, lcrp, OCI_DEFAULT);
+
+  printf("\n ----------- %s LCR Header  -----------------\n",
+         lcrtype == OCI_LCR_XDDL ? "DDL" : "ROW");
 
   if (ret != OCI_SUCCESS)
-    ocierror(ocip, (char *)"OCILCRHeaderGet failed");
+    ocierror(ocip, (char *)"OCILCRHeaderGet failed", TRUE);
   else
   {
-    printf("src_db_name=%.*s\ncmd_type=%.*s txid=%.*s\n",
-           src_db_namel, src_db_name, cmd_type_len, cmd_type, txidl, txid );
+    /* check sequence lcr */
+    if (lcrtype == OCI_LCR_XROW)
+    {
+      seqlcr = (lbit(flag, OCI_ROWLCR_SEQ_LCR) > 0);
+    }
 
-    if (ownerl > 0)
-      printf("owner=%.*s oname=%.*s \n", ownerl, owner, onamel, oname);
+    printf("OCILCRHeaderGet, flag is 0x%x\n", flag);
+
+    /* See if this is an idkey LCR */
+    if (lbit(flag, OCI_ROWLCR_HAS_ID_KEY_ONLY))
+    {
+      printf("XXX ID KEY LCR\n");
+      *idkey_lcr = TRUE;
+    }
+
+    memcpy(ctxp->last_lcrpos, pos, pos_len);
+    ctxp->last_lcrpos_len = pos_len;
+
+    print_pos(ocip, pos, pos_len, (char *)"LCR ID");
+    printf("src_db_name=%.*s cmd_type=%.*s txid=%.*s\n",
+           src_db_namel, src_db_name, cmd_type_len, cmd_type, txidl, txid );
+    ctxp->is_commit = FALSE;
+    if (samecmd(cmd_type, cmd_type_len,
+                OCI_LCR_ROW_CMD_COMMIT, strlen(OCI_LCR_ROW_CMD_COMMIT)))
+    {
+      ctxp->is_commit = TRUE;
+      return OCI_SUCCESS;
+    }
+
+    printf("owner=%.*s oname=%.*s \n", ownerl, owner, onamel, oname);
+
+    ctxp->ownerlen = ownerl;
+    ctxp->owner    = owner;
+    ctxp->onamelen = onamel;
+    ctxp->oname    = oname;
+    ctxp->txid     = txid;
+    ctxp->txidlen  = txidl;
 
     if (lcrtype == OCI_LCR_XDDL)
-      print_ddl(ocip, lcrp);                          /* print DDL statement */
-    else 
     {
-      /* If delete or update command print OLD column list */
-      if (IS_DELETE_CMD(cmd_type, cmd_type_len) ||
-          IS_UPDATE_CMD(cmd_type, cmd_type_len))
+      print_ddl(ocip, lcrp);
+    }
+    else if (lcrtype == OCI_LCR_XROW && ctxp->longform)
+    {
+      boolean  loblcr = FALSE;
+
+      loblcr =
+         (samecmd(cmd_type, cmd_type_len,
+              OCI_LCR_ROW_CMD_LOB_WRITE, strlen(OCI_LCR_ROW_CMD_LOB_WRITE)) ||
+          samecmd(cmd_type, cmd_type_len,
+              OCI_LCR_ROW_CMD_LOB_TRIM, strlen(OCI_LCR_ROW_CMD_LOB_TRIM)) ||
+          samecmd(cmd_type, cmd_type_len,
+              OCI_LCR_ROW_CMD_LOB_ERASE, strlen(OCI_LCR_ROW_CMD_LOB_ERASE)));
+
+      if (loblcr)
+        print_lob_info (ctxp);
+
+      if (samecmd(cmd_type, cmd_type_len,
+                  OCI_LCR_ROW_CMD_DELETE, strlen(OCI_LCR_ROW_CMD_DELETE)) ||
+          samecmd(cmd_type, cmd_type_len,
+                  OCI_LCR_ROW_CMD_UPDATE, strlen(OCI_LCR_ROW_CMD_UPDATE)))
       {
-        print_col_data(ocip, lcrp, OCI_LCR_ROW_COLVAL_OLD);
+        ret = process_lcr_data(ctxp, lcrp, OCI_LCR_ROW_COLVAL_OLD, seqlcr);
       }
 
-      /* If insert, update or lob operaation print NEW column list */
-      if (IS_INSERT_CMD(cmd_type, cmd_type_len) ||
-          IS_UPDATE_CMD(cmd_type, cmd_type_len) ||
-          IS_LOBOP_CMD(cmd_type, cmd_type_len))
+      if (samecmd(cmd_type, cmd_type_len,
+                  OCI_LCR_ROW_CMD_INSERT, strlen(OCI_LCR_ROW_CMD_INSERT)) ||
+          samecmd(cmd_type, cmd_type_len,
+                  OCI_LCR_ROW_CMD_UPDATE, strlen(OCI_LCR_ROW_CMD_UPDATE)) ||
+          loblcr)
       {
-        print_col_data(ocip, lcrp, OCI_LCR_ROW_COLVAL_NEW);
+        ret = process_lcr_data(ctxp, lcrp, OCI_LCR_ROW_COLVAL_NEW, seqlcr);
       }
     }
-  } 
+  }
+  return ret;
 }
 
 

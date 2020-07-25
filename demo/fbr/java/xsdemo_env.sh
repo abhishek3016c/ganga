@@ -21,12 +21,12 @@
 #
 ########################################
 
-setenv CLASSPATH .:${ORACLE_HOME}/rdbms/jlib/xstreams.jar:${ORACLE_HOME}/dbjava/lib/ojdbc5.jar:${CLASSPATH}
+export CLASSPATH=.:${ORACLE_HOME}/rdbms/jlib/xstreams.jar:${ORACLE_HOME}/dbjava/lib/ojdbc5.jar:${CLASSPATH}
 
 echo 'CLASSPATH: ' ${CLASSPATH}
 
-setenv PATH .:${ORACLE_HOME}/bin:${ORACLE_HOME}/jdk/bin:${PATH}
+export PATH=.:${ORACLE_HOME}/bin:${ORACLE_HOME}/jdk/bin:${PATH}
 echo 'PATH: ' ${PATH}
 
-setenv LD_LIBRARY_PATH ${ORACLE_HOME}/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=${ORACLE_HOME}/lib:${LD_LIBRARY_PATH}
 echo 'LD_LIBRARY_PATH: ' ${LD_LIBRARY_PATH}

@@ -52,7 +52,7 @@ public class XSDemoLCRWriter
   {
     this.prefix = prefix;
     this.suffix = suffix;
-    this.filename = prefix+"_"+suffix+".fbr";
+    this.filename = prefix+"_"+suffix+".csv";
     // create the lcr writer with specified filename
     // start writing from the begining of the file
     this.fos = new FileOutputStream(filename);

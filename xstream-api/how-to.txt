@@ -1,11 +1,6 @@
 #Capture change for entire database
 connect stradm/stradm
-BEGIN
-    DBMS_XSTREAM_ADM.CREATE_OUTBOUND(
-        server_name => 'dbnexus_out',
-        queue_name => 'datavalidation_q');
-END
-/;
+exec DBMS_XSTREAM_ADM.CREATE_OUTBOUND(server_name => 'dbnexus_out');
 
 #Useful links
 https://docs.oracle.com/cd/E11882_01/server.112/e16545/xstrm_oci.htm#XSTRM17728
@@ -57,23 +52,17 @@ EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_scn=> 8
 #Run xoidkey
 ./xoidkey -ob_svr DBNEXUS_OUT -ob_db database -ob_usr stradm -ob_pwd stradm -db_usr stradm -db_pwd stradm > xoidkey.log 2>&1 &
 
-url
-http://corsa04-provisionediops-2015363004.vpod.t.force.com
-app
-app
-db
-qpid
-qpid
-mnds1
-lb
-controller1
-load1
-10.225.246.172
-10.225.246.226
-10.225.246.240
-10.225.246.36
-10.225.246.61
-10.225.246.219
-10.225.243.249
-10.225.246.34
-10.225.246.28
+
+#Create ADMIN user
+-------------------------------------------------------
+-- (1) Create ADMIN account
+-------------------------------------------------------
+create user dbnexusadm identified by dbnexusadm;
+grant resource, unlimited tablespace, connect to dbnexusadm;
+grant dba to dbnexusadm;
+exec dbms_xstream_auth.grant_admin_privilege(grantee => 'dbnexusadm');
+-------------------------------------------------------
+-- (2) Set up XStreams Out at inst1
+-------------------------------------------------------
+connect dbnexusadm/dbnexusadm
+exec DBMS_XSTREAM_ADM.CREATE_OUTBOUND(server_name => 'DBNEXUS_OUT');

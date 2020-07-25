@@ -42,7 +42,7 @@ variable queuename VARCHAR2(30);
 
 -- create outbound server at xstream_out site
 begin
-  dbms_xstream_adm.create_outbound('DEMOOUT');
+  dbms_xstream_adm.create_outbound('DBNEXUS_OUT');
 end;
 /
 
@@ -51,7 +51,7 @@ begin
      into :capname
      FROM dba_capture c, DBA_XSTREAM_OUTBOUND o 
      WHERE c.CAPTURE_NAME = o.CAPTURE_NAME AND
-           o.SERVER_NAME = 'DEMOOUT';
+           o.SERVER_NAME = 'DBNEXUS_OUT';
 end;
 /
 
@@ -61,7 +61,7 @@ begin
    SELECT QUEUE_NAME
      into :queuename
      FROM DBA_XSTREAM_OUTBOUND
-     WHERE SERVER_NAME = 'DEMOOUT';
+     WHERE SERVER_NAME = 'DBNEXUS_OUT';
 end;
 /
 print queuename
@@ -85,7 +85,7 @@ END;
 SELECT c.state
      FROM v$xstream_capture c, DBA_XSTREAM_OUTBOUND o 
      WHERE c.CAPTURE_NAME = o.CAPTURE_NAME AND
-           o.SERVER_NAME = 'DEMOOUT';
+           o.SERVER_NAME = 'DBNEXUS_OUT';
 
 select capture_name, state from v$xstream_capture;
 select server_name, connect_user, capture_name, source_database, capture_user,

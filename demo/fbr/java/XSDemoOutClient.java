@@ -38,11 +38,11 @@ import java.io.RandomAccessFile;
 public class XSDemoOutClient
 {
   // default values and constants
-  public static String prefix = "xsdemo_archive";
-  public static final String xsoutProgressFile = "xsdemo_out_progress";   
-  public static final String xsoutName = "DEMOOUT";
-  public static final String xsoutusername = "stradm"; 
-  public static final String xsoutpasswd = "stradm";
+  public static String prefix = "trail";
+  public static final String xsoutProgressFile = "dbnexus_trail";
+  public static final String xsoutName = "DBNEXUS_OUT";
+  public static final String xsoutusername = "dbnexusadm";
+  public static final String xsoutpasswd = "dbnexusadm";
 
   public static boolean tracing  = false; 
     
@@ -53,9 +53,9 @@ public class XSDemoOutClient
     long suffix = getProgress()+1;
     
     // start the main loop
-    System.out.println("Starting XSDemo OutClient ...");
+    System.out.println("Starting DBNexus OutClient ...");
     startXSOut(out_url, prefix, suffix, xsoutName, xsoutusername, xsoutpasswd);
-    System.out.println("XSDemo outclient terminated");
+    System.out.println("DBNexus outclient terminated");
   }
 
   public static void printUsage()
@@ -63,7 +63,7 @@ public class XSDemoOutClient
     System.out.println("");      
     System.out.println("Usage: java [-DPrefix=<prefix>]");
     System.out.println("            [-DTracing=<true|false>]");
-    System.out.println("            XSDemoOutClient " +"<oracle_sid> " + 
+    System.out.println("            DBNexusOutClient " +"<oracle_sid> " +
                        "<host> "+ "<port> ");
     System.out.println("");     
     System.out.println("To specify the Prefix of log files:");
@@ -146,7 +146,7 @@ public class XSDemoOutClient
     }
     catch(Exception e)
     {
-      System.out.println("fail to establish database connection");
+      System.out.println("failed to establish database connection");
       e.printStackTrace();
       return;
     }

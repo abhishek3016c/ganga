@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.math.BigInteger;
 
-public class XSDemoLCRReader
+public class dbnexus_lcr_reader
 {
   private String prefix = null;
   private long suffix = 0;
@@ -48,7 +48,7 @@ public class XSDemoLCRReader
   private byte[] processedLowPosition;
   public static final int headerSize = 70; // 4B leng + 64B position + 2B marker
     
-  public XSDemoLCRReader(String prefix, long suffix)
+  public dbnexus_lcr_reader(String prefix, long suffix)
     throws IOException, StreamsException
   {
     this.prefix = prefix;

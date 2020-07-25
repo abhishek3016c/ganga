@@ -37,7 +37,7 @@ import java.io.FileInputStream;
 import java.io.DataInputStream;
 import java.io.RandomAccessFile;
 
-public class XSDemoInClient
+public class dbnexus_in_client
 {
   // default values and constants
   public static String prefix = "xsdemo_archive";

@@ -3,7 +3,7 @@
 #include<stdio.h>
 #include<string.h>
 
-unsigned long hash(unsigned char *str)
+unsigned long hash_string(unsigned char *str)
 {
 		unsigned long hash = 5387;
 		int c;
@@ -14,13 +14,20 @@ unsigned long hash(unsigned char *str)
 		return hash;
 }
 
+unsigned int hash_integer(unsigned int x) {
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
+    return x;
+}
+
 #define MAX_LENGTH 128
 
 int main()
 {
 
   unsigned char leftStr[] = "000000000000000";
-	unsigned char rightStr[] = "000000000000000";
+  unsigned char rightStr[] = "000000000000000";
 
   int ret;
   char buffer[MAX_LENGTH];
@@ -34,8 +41,8 @@ int main()
   int memcmp(const void *str1, const void *str2, size_t n))
   compares the first n bytes of memory area str1 and memory area str2. */
 
-  printf("Hash output for leftStr: %ld\n", hash(leftStr));
-  printf("Hash output for rightStr: %ld\n", hash(rightStr));
+  printf("Hash output for leftStr: %ld\n", hash_string(leftStr));
+  printf("Hash output for rightStr: %ld\n", hash_string(rightStr));
 /*
   #memcpy(hashLeft, snprintf(buffer, MAX_LENGTH+1, "%lu", hash(leftStr)), sizeof(leftStr));
   #memcpy(hashRight, snprintf(buffer, MAX_LENGTH+1, "%lu", hash(leftStr)), sizeof(rightStr));

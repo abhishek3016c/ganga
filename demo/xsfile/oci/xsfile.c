@@ -1157,7 +1157,7 @@ static void get_lcrs(oci_t * ocip)
       if (!ts)
       {
         /* lcr is not in the table shape list, ignore it */  
-        printf("Warning: ignoring the LCR, no tableshape\n");
+        printf("Warning: ignoring the LCR, no tableshape has been defined.\n");
         /* update the processed low watermark */
         memcpy(proclwm, mlcr.position, mlcr.positionl);
         proclwm_len = mlcr.positionl;

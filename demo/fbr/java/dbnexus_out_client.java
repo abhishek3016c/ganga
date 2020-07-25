@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.io.File;
 import java.io.RandomAccessFile;
 
-public class XSDemoOutClient
+public class dbnexus_out_client
 {
   // default values and constants
   public static String prefix = "trail";
@@ -135,7 +135,7 @@ public class XSDemoOutClient
     Connection out_conn = null;
     XStreamOut xsOut = null;
     int retry = 0;
-    XSDemoLCRWriter lcrWriter = null;
+    dbnexus_lcr_writer lcrWriter = null;
     byte[] processed_low_position = null;
     
     // create a jdbc oci connection
@@ -202,7 +202,7 @@ public class XSDemoOutClient
       // initialize LCRWriter
       try
       {      
-        lcrWriter = new XSDemoLCRWriter(prefix, suffix);
+        lcrWriter = new dbnexus_lcr_writer(prefix, suffix);
         lcrWriter.setTracing(tracing);
       }
       catch(IOException e)
@@ -270,7 +270,7 @@ public class XSDemoOutClient
 
               // proceed to the next log file
               suffix++;
-              lcrWriter = new XSDemoLCRWriter(prefix, suffix);
+              lcrWriter = new dbnexus_lcr_writer(prefix, suffix);
               lcrWriter.setTracing(tracing);
               lcrCount = 0;
               System.out.println("Writing to LCR log: "+

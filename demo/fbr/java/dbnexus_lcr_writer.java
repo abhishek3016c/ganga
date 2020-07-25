@@ -34,7 +34,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-public class XSDemoLCRWriter
+public class dbnexus_lcr_writer
 {
   private String prefix = null;
   private long suffix = 0;
@@ -47,7 +47,7 @@ public class XSDemoLCRWriter
   private boolean closed = false;
   public static final int headerSize = 70; // 4B leng + 64B position + 2B marker
      
-  public XSDemoLCRWriter(String prefix, long suffix)
+  public dbnexus_lcr_writer(String prefix, long suffix)
     throws IOException
   {
     this.prefix = prefix;
@@ -509,7 +509,7 @@ public class XSDemoLCRWriter
         }
         else
         {
-          XSDemoOutClient.printHex(rawdata);
+          dbnexus_out_client.printHex(rawdata);
         }       
       }
     }
@@ -578,7 +578,7 @@ public class XSDemoLCRWriter
       }
       else
       {
-        XSDemoOutClient.printHex(value);
+        dbnexus_out_client.printHex(value);
       }
     }    
 

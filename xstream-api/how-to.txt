@@ -47,7 +47,7 @@ make -f $ORACLE_HOME/rdbms/demo/demo_rdbms.mk build EXE=dbnexus OBJS=dbnexus.o
 /home/oracle/dbnexus/dbnexus -svr DBNEXUS_OUT -db database -usr stradm -pwd stradm
 
 #Change the start SCN / start time for capture process
-EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_scn=> 8356043515714);
+EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_scn=> 8356044174495);
 
 #Run xoidkey
 ./xoidkey -ob_svr DBNEXUS_OUT -ob_db database -ob_usr stradm -ob_pwd stradm -db_usr stradm -db_pwd stradm > xoidkey.log 2>&1 &

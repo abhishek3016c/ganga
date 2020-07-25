@@ -87,9 +87,9 @@ All rights reserved. */
 #define UPDATE_CMD         "UPDATE"
 #define DELETE_CMD         "DELETE"
 #define M_COL              1000
-#define M_FILE_NAMEL       82     /* max lenght of schema_objname_seqnum.dat 
+#define M_FILE_NAMEL       82000     /* max lenght of schema_objname_seqnum.dat
                                    * M_IDEN +"_"+M_IDEN+"_"+16+".dat" */
-#define CSV_INTERVAL       1         /* interval how often we close a csv file,
+#define CSV_INTERVAL       100         /* interval how often we close a csv file,
                                       * bump up sequence number and open the 
                                       * new csv file for incoming LCRs */
 #define UB2LEN             2
@@ -993,8 +993,8 @@ static void getTableShape(oci_t *ocip, mlcr_t *mlcrp, tableshape **ts,
 
   if (!found)
   {
-    printf("cannot find object (%.*s).(%.*s) in tableshape list\n\n",
-           mlcrp->ownerl, mlcrp->owner, mlcrp->onamel, mlcrp->oname);
+    //printf("cannot find object (%.*s).(%.*s) in tableshape list\n\n",
+    //       mlcrp->ownerl, mlcrp->owner, mlcrp->onamel, mlcrp->oname);
     if (tracing)
     {
       print_mlcr(ocip, mlcrp, lcrtype);
@@ -1157,7 +1157,7 @@ static void get_lcrs(oci_t * ocip)
       if (!ts)
       {
         /* lcr is not in the table shape list, ignore it */  
-        printf("Warning: ignoring the LCR, no tableshape has been defined.\n");
+        //printf("Warning: ignoring the LCR, no tableshape has been defined.\n");
         /* update the processed low watermark */
         memcpy(proclwm, mlcr.position, mlcr.positionl);
         proclwm_len = mlcr.positionl;

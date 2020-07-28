@@ -52,7 +52,7 @@ All rights reserved. */
  *----------------------------------------------------------------------*/ 
 
 #define MAX_COLUMNS        1000                       /* max cols in a table */
-#define MAX_PRINT_BYTES    (50) /* print max of 50 bytes per col/chunk value */
+#define MAX_PRINT_BYTES    (50000) /* print max of 50 bytes per col/chunk value */
 #define BUF_SIZE           80
 #define DEFAULT_FS_PREC    6             /* default fractional sec precision */
 #define DEFAULT_LF_PREC    9              /* default leading field precision */
@@ -276,8 +276,7 @@ static void get_lcrs(oci_t * ocip)
                                              (ub1 *)0, (ub2 *)0, OCI_DEFAULT))
                           == OCI_STILL_EXECUTING)
     {
-      /*print_lcr(ocip, lcr, lcrtype); */
-      print_lcr_cb(ocip, lcr, lcrtype, flag);
+      print_lcr(ocip, lcr, lcrtype);
 
       /* If LCR has chunked columns (i.e, has LOB/Long/XMLType columns) */
       if (flag & OCI_XSTREAM_MORE_ROW_DATA)
@@ -663,101 +662,6 @@ static void print_lcr(oci_t *ocip, void *lcrp, ub1 lcrtype)
   } 
 }
 
-
-static void print_lcr_cb(void *vctxp, void *lcrp, ub1 lcrtype, oraub8 flags)
-{
-   myctx_t *ctxp = (myctx_t*)vctxp;
-   sword      ret;
-   oci_t   *ociout = ctxp->outbound_ocip;
-   ub2      num_bind = 0;
-   ub2      bind_var_dtyp[ARR_SIZE];
-   void    *bind_var_valuesp[ARR_SIZE];
-   OCIInd   bind_var_indp[ARR_SIZE];
-   ub2      bind_var_alensp[ARR_SIZE];
-   ub2      bind_var_csetidp[ARR_SIZE];
-   ub1      bind_var_csetfp[ARR_SIZE];
-   oratext *lob_column_names[ARR_SIZE];
-   ub2      lob_column_namesl[ARR_SIZE];
-   oraub8   lob_column_flags[ARR_SIZE];
-   ub2      array_size = ARR_SIZE;
-   oratext  bind_var_syntax[] = ":";
-
-   prepare_env(ctxp);
-
-
-   ctxp->lcrcnt++;
-   ret = OCILCRRowStmtGet(ociout->svcp, ociout->errp, ctxp->dml,
-                          &ctxp->dml_len , lcrp, OCI_DEFAULT);
-
-   /* Dont print COMMIT lcr */
-   if (!memcmp(ctxp->dml, " COMMIT ", 8))
-     return;
-
-   printf("------------------ LCR %d --------------------\n", ctxp->lcrcnt);
-   if (!ret)
-     printf("\nINLINE SQL\n------\nDML: [LEN=%d]\n %.*s\n\n",ctxp->dml_len,
-                                          ctxp->dml_len, ctxp->dml);
-   else
-     printf("INLINE DML FAILED (%d)\n", ret);
-
-
-   ctxp->dml_len = ctxp->max_len;
-   ret = OCILCRWhereClauseGet(ociout->svcp, ociout->errp, ctxp->dml,
-                             &ctxp->dml_len , lcrp, OCI_DEFAULT);
-   if (!ret)
-   {
-     printf ("WHERE CLAUSE:[LEN=%d]\n%.*s\n\n",ctxp->dml_len,
-                                             ctxp->dml_len, ctxp->dml);
-   }
-   else
-   {
-     printf("WHERE CLAUSE FAILED (%d)", ret);
-   }
-
-  ctxp->dml_len = ctxp->max_len;
-  num_bind = 0;
-  ret = OCILCRRowStmtWithBindVarGet(
-                        ociout->svcp, ociout->errp, ctxp->dml, &ctxp->dml_len,
-                        &num_bind,
-                        bind_var_dtyp, bind_var_valuesp, bind_var_indp,
-                        bind_var_alensp, bind_var_csetidp,
-                        bind_var_csetfp, lcrp,
-                        lob_column_names, lob_column_namesl, lob_column_flags,
-                        array_size, bind_var_syntax,
-                        OCI_DEFAULT);
-
-   if (!ret)
-     printf("\nBINDS SQL\n-----\nDML [LEN=%d] [BINDS=%d]\n %.*s\n\n",
-                                     ctxp->dml_len, num_bind,
-                                     ctxp->dml_len, ctxp->dml);
-   else
-     printf("BINDS DML FAILED (%d)\n", ret);
-
-   ctxp->dml_len = ctxp->max_len;
-
-   num_bind = 0;
-   ret = OCILCRWhereClauseWithBindVarGet(
-                        ociout->svcp, ociout->errp, ctxp->dml, &ctxp->dml_len,
-                        &num_bind,
-                        bind_var_dtyp, bind_var_valuesp, bind_var_indp,
-                        bind_var_alensp, bind_var_csetidp,
-                        bind_var_csetfp, lcrp,
-                        array_size, bind_var_syntax,
-                        OCI_DEFAULT);
-
-   if (!ret)
-     printf("WHERE CLAUSE [LEN=%d] [BINDS=%d]\n%.*s\n\n",
-                                     ctxp->dml_len, num_bind,
-                                     ctxp->dml_len, ctxp->dml);
-   else
-     printf("WHERE CLAUSE FAILED (%d)\n", ret);
-
-
-   if (flags & OCI_XSTREAM_MORE_ROW_DATA)
-   {
-     drain_chunks((myctx_t*)vctxp);
-   }
-}
 
 /*---------------------------------------------------------------------
  * detach - Detach from outbound server

@@ -52,7 +52,9 @@ EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_scn=> 8
 #Run xoidkey
 ./xoidkey -ob_svr DBNEXUS_OUT -ob_db database -ob_usr stradm -ob_pwd stradm -db_usr stradm -db_pwd stradm > xoidkey.log 2>&1 &
 
-
+#Setup JDBC drivers
+mkdir -p $ORACLE_HOME/dbjava/lib
+cd $ORACLE_HOME/dbjava/lib ; unzip instant*zip
 #Create ADMIN user
 -------------------------------------------------------
 -- (1) Create ADMIN account
@@ -66,3 +68,45 @@ exec dbms_xstream_auth.grant_admin_privilege(grantee => 'dbnexusadm');
 -------------------------------------------------------
 connect dbnexusadm/dbnexusadm
 exec DBMS_XSTREAM_ADM.CREATE_OUTBOUND(server_name => 'DBNEXUS_OUT');
+-------------------------------------------------------
+-- (3) Change the start SCN / start time for capture process
+-------------------------------------------------------
+connect dbnexusadm/dbnexusadm
+EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_scn=> 8356043838660);
+-------------------------------------------------------
+-- (4) Change the start start time for capture process
+-------------------------------------------------------
+connect dbnexusadm/dbnexusadm
+EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_time=> sysdate);
+
+# Run XOIDKEY
+./xoidkey -ob_svr DBNEXUS_OUT -ob_db database -ob_usr dbnexusadm -ob_pwd dbnexusadm -db_usr dbnexusadm -db_pwd dbnexusadm > idkey.log 2>&1 &
+#Java version for IDKEY
+java xoidkey database `hostname` 1521 dbnexusadm dbnexusadm DBNEXUS_OUT dbnexusadm dbnexusadm > java_idkey.log 2>&1 &
+
+# SQLGEN
+compile:
+make -f /oracle/rdbms/11.2.0.4/rdbms/demo/demo_rdbms.mk build EXE=XSDemoOutClient OBJS=XSDemoOutClient.o
+./XSDemoOutClient -user dbnexusadm -passw dbnexusadm -dbsrc database -dbdest database -apply DBNEXUS_OUT -bind -printlcr
+
+# File based replication
+set serveroutput on
+SET NEWPAGE NONE
+set feedback off
+set echo off
+set feedback off
+set heading off
+set colsep '","'
+set pagesize 0
+SET UNDERLINE OFF
+set pagesize 50000
+set linesize 32767
+select '","'||column_name||'","'||data_type||'('||data_length||')' from dba_tab_columns where owner='SALES' and table_name='ACCOUNT_' order by column_id;
+#Compile
+make -f /oracle/rdbms/11.2.0.4/rdbms/demo/demo_rdbms.mk build EXE=xsfile OBJS=xsfile.o
+./xsfile -svr DBNEXUS_OUT -db database -usr dbnexusadm -interval 3600 -mode csv
+
+# JAVA based xout
+java xout database `hostname` 1521 dbnexusadm dbnexusadm DBNEXUS_OUT
+# C based xout
+./dbnexus_cb -svr DBNEXUS_OUT -db database -usr dbnexusadm -pwd dbnexusadm

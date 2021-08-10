@@ -2,17 +2,6 @@
 // Created by Abhishek Chaturvedi on 12/11/19.
 //
 
-/**************************************************************************
- Copyright (c) 2001, 2019, Oracle and/or its affiliates. All rights reserved.
-
-  Program description:
-
-  User exit example for Windows NT and Unix.  This example uses the
-  TCUSTMER and TCUSTORD tables, which can be created and manipulated using
-  the demo*.sql scripts included with the ER release.
-
-***************************************************************************/
-
 #include <stdio.h>
 
 #ifdef WIN32

@@ -54,6 +54,7 @@ EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_scn=> 8
 
 #Setup JDBC drivers
 mkdir -p $ORACLE_HOME/dbjava/lib
+cp /home/oracle/ganga/drivers/instantclient-basic-linux.x64-11.2.0.4.0.zip /oracle/rdbms/11.2.0.4/dbjava/lib/
 cd $ORACLE_HOME/dbjava/lib ; unzip instant*zip
 #Create ADMIN user
 -------------------------------------------------------
@@ -63,6 +64,12 @@ create user dbnexusadm identified by dbnexusadm;
 grant resource, unlimited tablespace, connect to dbnexusadm;
 grant dba to dbnexusadm;
 exec dbms_xstream_auth.grant_admin_privilege(grantee => 'dbnexusadm');
+
+-- Turn on archive log mode.
+shutdown immediate;
+startup mount;
+alter database archivelog;
+alter database open;
 -------------------------------------------------------
 -- (2) Set up XStreams Out at inst1
 -------------------------------------------------------
@@ -78,6 +85,24 @@ EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_scn=> 8
 -------------------------------------------------------
 connect dbnexusadm/dbnexusadm
 EXEC DBMS_XSTREAM_ADM.ALTER_OUTBOUND( server_name => 'DBNEXUS_OUT',start_time=> sysdate);
+-------------------------------------------------------
+-- (5) Drop the outbound process
+-------------------------------------------------------
+connect dbnexusadm/dbnexusadm
+EXEC DBMS_XSTREAM_ADM.DROP_OUTBOUND( server_name => 'DBNEXUS_OUT');
+
+#Run XOUT_CB
+cd ~/ganga/demo/oci
+cp ~/ganga/demo/oci/demo_rdbms.mk $ORACLE_HOME/rdbms/demo/demo_rdbms.mk
+make -f $ORACLE_HOME/rdbms/demo/demo_rdbms.mk build EXE=xout OBJS=xout.o
+./xout_cb -h
+    Usage: xout_cb -svr <svr_name> -db <db_name> -usr <conn_user> -pwd <password>
+      svr  : outbound server name
+      db   : database name of outbound server
+      usr  : connect user to outbound server
+      pwd  : password of outbound's connect user
+./xout_cb -svr DBNEXUS_OUT -db database -usr dbnexusadm -pwd dbnexusadm > xout_cb.log 2>&1 &
+
 
 # Run XOIDKEY
 ./xoidkey -ob_svr DBNEXUS_OUT -ob_db database -ob_usr dbnexusadm -ob_pwd dbnexusadm -db_usr dbnexusadm -db_pwd dbnexusadm > idkey.log 2>&1 &
@@ -109,4 +134,6 @@ make -f /oracle/rdbms/11.2.0.4/rdbms/demo/demo_rdbms.mk build EXE=xsfile OBJS=xs
 # JAVA based xout
 java xout database `hostname` 1521 dbnexusadm dbnexusadm DBNEXUS_OUT
 # C based xout
-./dbnexus_cb -svr DBNEXUS_OUT -db database -usr dbnexusadm -pwd dbnexusadm
+cp ~/ganga/demo/oci/demo_rdbms.mk $ORACLE_HOME/rdbms/demo/demo_rdbms.mk
+make -f $ORACLE_HOME/rdbms/demo/demo_rdbms.mk build EXE=xout OBJS=xout.o
+#./dbnexus_cb -svr DBNEXUS_OUT -db database -usr dbnexusadm -pwd dbnexusadm

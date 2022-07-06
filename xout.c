@@ -1,3 +1,4 @@
+/* this is a test */
 /* Copyright (c) 2008, 2011, Oracle and/or its affiliates. 
 All rights reserved. */
 
